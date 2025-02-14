@@ -1,0 +1,78 @@
+#KNN (MULTIPLE PREDICTIONS)
+
+import pandas as pd
+import numpy as np
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+import seaborn as sns
+import matplotlib.pyplot as plt
+from ipywidgets import interact, widgets, VBox, Button
+
+
+train_data = pd.read_csv('Training.csv')
+test_data = pd.read_csv('Testings.csv')
+
+
+X_train = train_data.iloc[:, :-1]
+y_train = train_data.iloc[:, -1]
+
+X_test = test_data.iloc[:, :-1]
+y_test = test_data.iloc[:, -1]
+
+
+k = 5
+knn = KNeighborsClassifier(n_neighbors=k)
+knn.fit(X_train, y_train)
+
+
+def predict_possible_diseases(symptoms):
+
+    input_data = np.zeros(X_train.shape[1])
+
+
+    for symptom in symptoms:
+        if symptom in X_train.columns:
+            symptom_index = X_train.columns.get_loc(symptom)
+            input_data[symptom_index] = 1
+        else:
+            print(f"Warning: Symptom '{symptom}' not found in the training data features.")
+
+
+    input_data = input_data.reshape(1, -1)
+
+
+    distances, indices = knn.kneighbors(input_data, n_neighbors=k)
+
+
+    possible_diseases = y_train.iloc[indices[0]].value_counts().index.tolist()
+
+    print("\nTop possible diseases (based on closest neighbors):")
+    for i, disease in enumerate(possible_diseases, start=1):
+        print(f"{i}. {disease}")
+
+
+symptom_options = X_train.columns.tolist()
+print("\nList of available symptoms:")
+print(symptom_options)
+
+
+num_symptoms = int(input("Enter the number of symptoms you want to input: "))
+
+
+dropdowns = [widgets.Dropdown(options=symptom_options, description=f'Symptom {i+1}:', style={'description_width': 'initial'}) for i in range(num_symptoms)]
+
+
+button = Button(description="Predict Possible Diseases")
+
+
+def on_button_click(b):
+    selected_symptoms = [dropdown.value for dropdown in dropdowns if dropdown.value is not None]
+    if selected_symptoms:
+        predict_possible_diseases(selected_symptoms)
+    else:
+        print("Please select at least one symptom.")
+
+button.on_click(on_button_click)
+
+
+display(VBox(dropdowns + [button]))
